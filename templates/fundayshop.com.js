@@ -1,9 +1,8 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const logger = require("../logger");
-const { delay, readCSV, writeCSV, goto, setCookies,init } = require("../utils");
+ const { delay, readCSV, writeCSV, goto, setCookies,init,logger, appendCSV} = require("../utils");
 const moment = require('moment');
-
+const domain = 'fundayshop.com';
 puppeteer.use(StealthPlugin());
 
 const inputFile = '../temp/city.csv';
@@ -11,27 +10,25 @@ const outputFile = '../temp/fundayshop.address.csv';
 
 (async () => {
     try {
-        logger(`Запуск парсинга FundayShop`);
-        const cities = await readCSV(inputFile);
+        logger(domain, `Запуск парсинга FundayShop`);
+        const cities = await readCSV(inputFile, domain);
         const browser = await puppeteer.launch(await init());
         const page = await browser.newPage();
 
-        await setCookies(page, cookies);
+        await setCookies(page, cookies, domain);
 
-        if (!await goto(page, 'https://fundayshop.com/stores', '.stores .container .title span', 'networkidle2')) {
+        if (!await goto(page, 'https://fundayshop.com/stores', '.stores .container .title span', 'networkidle2', domain)) {
             return;
         }
 
-        let results = [];
         for (const row of cities) {
-            results.push(...await extractShops(page, row.city));
+            await extractShops(page, row.city)
         }
 
-        writeCSV(outputFile, results);
         await browser.close();
-        logger(`Парсинг завершен.`);
+        logger(domain, `Парсинг завершен.`);
     } catch (err) {
-        logger(`Ошибка: ${err}`);
+        logger(domain, `Ошибка: ${err}`);
     }
 })();
 
@@ -42,7 +39,7 @@ const cookies = [
 
 async function extractShops(page, city) {
     try {
-        logger(`Начинаем сбор данных для города: ${city}`);
+        logger(domain, `Начинаем сбор данных для города: ${city}`);
         await page.click('.stores .container .title span');
         await delay(10000);
 
@@ -66,17 +63,17 @@ async function extractShops(page, city) {
                 "Регион": city,
                 "Торговый центр": mall,
                 "Адрес": address,
-                "Дата сбора": moment().format('DD.MM.YYYY'),
+                "Дата сбора": moment().format('DD.MM.YYYY')
             }
 
-            results.push(data);
+            appendCSV(outputFile, data, domain);
 
-            logger(`Собран магазин: ${JSON.stringify(data)}`);
+            logger(domain, `Собран магазин: ${JSON.stringify(data)}`);
         }
 
         return results;
     } catch (err) {
-        logger(`Ошибка при парсинге города ${city}: ${err}`);
+        logger(domain, `Ошибка при парсинге города ${city}: ${err}`);
         return [];
     }
 }

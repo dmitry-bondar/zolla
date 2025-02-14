@@ -1,40 +1,39 @@
 const puppeteer = require('puppeteer-extra');
-const logger = require("../logger");
-const { delay, readCSV, writeCSV, goto,init } = require("../utils");
+const { delay, readCSV, writeCSV, goto,init ,logger, appendCSV} = require("../utils");
 const moment = require('moment');
 
 const inputFile = '../temp/city.csv';
 const outputFile = '../temp/zenden.address.csv';
+const domain = 'zenden.ru';
 
 (async () => {
     try {
-        logger(`Запуск парсинга Zenden`);
-        const cities = await readCSV(inputFile);
+        logger(domain, `Запуск парсинга Zenden`);
+        const cities = await readCSV(inputFile, domain);
         const browser = await puppeteer.launch(await init());
         const page = await browser.newPage();
 
-        if (!await goto(page, 'https://zenden.ru/shops', '.shops-standalone__group-item', 'domcontentloaded')) {
+        if (!await goto(page, 'https://zenden.ru/shops', '.shops-standalone__group-item', 'domcontentloaded', domain)) {
             return;
         }
 
         let results = [];
         for (const row of cities) {
-            logger(`Обрабатываем город: ${row.city}`);
-            const cityResults = await extractShops(page, row.city);
-            results.push(...cityResults);
+            logger(domain, `Обрабатываем город: ${row.city}`);
+            await extractShops(page, row.city);
         }
 
-        writeCSV(outputFile, results);
+        writeCSV(outputFile, results, domain);
         await browser.close();
-        logger(`✅ Парсинг завершён. Данные сохранены в ${outputFile}`);
+        logger(domain, `✅ Парсинг завершён. Данные сохранены в ${outputFile}`);
     } catch (err) {
-        logger(`Критическая ошибка: ${err}`);
+        logger(domain, `Критическая ошибка: ${err}`);
     }
 })();
 
 async function extractShops(page, city) {
     try {
-        logger(`Начинаем сбор данных для города: ${city}`);
+        logger(domain, `Начинаем сбор данных для города: ${city}`);
 
         await page.click('.shops-standalone__group-item .js-cityModalOpenButton');
         await delay(5000);
@@ -51,11 +50,11 @@ async function extractShops(page, city) {
         const shopCards = await page.$$('#shops-map .shop-card');
 
         if (shopCards.length === 0) {
-            logger(`Магазины в городе ${city} не найдены.`);
+            logger(domain, `Магазины в городе ${city} не найдены.`);
             return results;
         }
 
-        logger(`Найдено ${shopCards.length} магазинов в городе ${city}.`);
+        logger(domain, `Найдено ${shopCards.length} магазинов в городе ${city}.`);
 
         for (const shopCard of shopCards) {
             const addressLines = await shopCard.$$eval('.shop-card__address .shop-card__line', nodes => nodes.map(n => n.textContent.trim()));
@@ -67,17 +66,17 @@ async function extractShops(page, city) {
                     "Регион": city,
                     "Торговый центр": mall,
                     "Адрес": address,
-                    "Дата сбора": moment().format('DD.MM.YYYY'),
+                    "Дата сбора": moment().format('DD.MM.YYYY')
                 };
 
-                results.push(data);
-                logger(` Собран магазин: ${JSON.stringify(data)}`);
+                appendCSV(outputFile, data, domain);
+                logger(domain, ` Собран магазин: ${JSON.stringify(data)}`);
             }
         }
 
         return results;
     } catch (err) {
-        logger(`Ошибка при парсинге города ${city}: ${err}`);
+        logger(domain, `Ошибка при парсинге города ${city}: ${err}`);
         return [];
     }
 }

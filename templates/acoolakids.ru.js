@@ -1,20 +1,20 @@
 const puppeteer = require('puppeteer-extra');
-const logger = require("../logger");
-const {delay, readCSV, writeCSV, goto, init, setCookies} = require("../utils");
+const { delay, readCSV, appendCSV, goto, init, setCookies, logger } = require("../utils");
 const moment = require('moment');
 
 const inputFile = '../temp/city.csv';
 const outputFile = '../temp/acoolakids.address.csv';
 const blacklist = ['subscribe'];
+const domain = 'acoolakids.ru';
 
 (async () => {
     try {
-        logger(`Запуск парсинга acoolakids`);
-        const cities = await readCSV(inputFile);
+        logger(domain, `Запуск парсинга acoolakids`);
+        const cities = await readCSV(inputFile, domain); // Передаем domain в readCSV
         const browser = await puppeteer.launch(await init());
         const page = await browser.newPage();
 
-        await setCookies(page, cookies);
+        await setCookies(page, cookies, domain); // Передаем domain в setCookies
 
         await page.setRequestInterception(true);
         page.on('request', (request) => {
@@ -26,25 +26,21 @@ const blacklist = ['subscribe'];
             }
         });
 
-        if (!await goto(page, 'https://acoolakids.ru/shops', '.city-choice-popup__confirm  .city-choice-popup__button_confirm', 'domcontentloaded')) {
+        if (!await goto(page, 'https://acoolakids.ru/shops', '.city-choice-popup__confirm  .city-choice-popup__button_confirm', 'domcontentloaded', domain)) {
             return;
-        }else{
+        } else {
             await page.click('.city-choice-popup__confirm  .city-choice-popup__button_confirm');
             await delay(5000);
         }
 
-        let results = [];
         for (const row of cities) {
-            logger(`Обрабатываем город: ${row.city}`);
-            const cityResults = await extractShops(page, row.city);
-            results.push(...cityResults);
+            logger(domain, `Обрабатываем город: ${row.city}`);
+            await extractShops(page, row.city);
         }
-
-        writeCSV(outputFile, results);
         await browser.close();
-        logger(`✅ Парсинг завершён. Данные сохранены в ${outputFile}`);
+        logger(domain, `✅ Парсинг завершён. Данные сохранены в ${outputFile}`);
     } catch (err) {
-        logger(`Критическая ошибка: ${err}`);
+        logger(domain, `Критическая ошибка: ${err}`);
     }
 })();
 
@@ -56,13 +52,13 @@ const cookies = [
 
 async function extractShops(page, city) {
     try {
-        logger(`Начинаем сбор данных для города: ${city}`);
+        logger(domain, `Начинаем сбор данных для города: ${city}`);
 
         await page.click('.header__location-wrap');
         await delay(5000);
 
         await page.waitForSelector('.search-input__field-wrapper #city-choice-search');
-        await page.type('.search-input__field-wrapper #city-choice-search', city, {delay: 500});
+        await page.type('.search-input__field-wrapper #city-choice-search', city, { delay: 500 });
         await delay(5000);
 
         await page.waitForSelector('.search-input__result-item');
@@ -73,19 +69,17 @@ async function extractShops(page, city) {
         const shopCards = await page.$$('.search-shop__wrapper .shop-address');
 
         if (shopCards.length === 0) {
-            logger(`Магазины в городе ${city} не найдены.`);
+            logger(domain, `Магазины в городе ${city} не найдены.`);
             return results;
         }
 
-        logger(`Найдено ${shopCards.length} магазинов в городе ${city}.`);
+        logger(domain, `Найдено ${shopCards.length} магазинов в городе ${city}.`);
 
         for (const shopCard of shopCards) {
             try {
-                // Получаем массив строк, берем первый элемент (если есть) и очищаем от пробелов
                 const address = await shopCard.$eval('.shop-address__label', el => el.textContent.trim())
                     .catch(() => "Адрес не найден");
 
-                // Получаем текст торгового центра
                 let mallText = await shopCard.$eval('.shop-address__title-wrapper', el => el.textContent.trim())
                     .catch(() => "");
                 const mall = /ТЦ|ТРЦ|СТЦ/.test(mallText) ? /,/.test(mallText) ? mallText.match(/^(.*),/)[1] : mallText : '';
@@ -94,19 +88,19 @@ async function extractShops(page, city) {
                     "Регион": city,
                     "Торговый центр": mall,
                     "Адрес": address,
-                    "Дата сбора": moment().format('DD.MM.YYYY'),
+                    "Дата сбора": moment().format('DD.MM.YYYY')
                 };
 
-                results.push(data);
-                logger(`Собран магазин: ${JSON.stringify(data)}`);
+                appendCSV(outputFile, data, domain);
+                logger(domain, `Собран магазин: ${JSON.stringify(data)}`);
             } catch (err) {
-                logger(`Ошибка при обработке карточки: ${err}`);
+                logger(domain, `Ошибка при обработке карточки: ${err}`);
             }
         }
 
         return results;
     } catch (err) {
-        logger(`Ошибка при парсинге города ${city}: ${err}`);
+        logger(domain, `Ошибка при парсинге города ${city}: ${err}`);
         return [];
     }
 }
