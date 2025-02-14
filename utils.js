@@ -14,6 +14,24 @@ async function getProxies() {
     return proxy;
 }
 
+async function init() {
+    const proxy = await getProxies();
+    return {
+        args: [
+            '--proxy-server=' + proxy,
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-blink-features=AutomationControlled',
+            '--window-size=1800,700'
+            // '--start-maximized'
+        ],
+        headless: false,
+        timeout: 60000,
+        executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        defaultViewport: null
+    };
+}
+
 async function readCSV(filePath) {
     return new Promise((resolve, reject) => {
         const results = [];
@@ -69,4 +87,4 @@ async function goto(page, url, waitSelector, waitUntil) {
     return success;
 }
 
-module.exports = { delay, getProxies, readCSV, writeCSV, goto, setCookies };
+module.exports = { delay, getProxies, readCSV, writeCSV, goto, setCookies,init };

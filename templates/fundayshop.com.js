@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const logger = require("../logger");
-const { delay, readCSV, writeCSV, goto, setCookies,getProxies } = require("../utils");
+const { delay, readCSV, writeCSV, goto, setCookies,init } = require("../utils");
 const moment = require('moment');
 
 puppeteer.use(StealthPlugin());
@@ -34,23 +34,6 @@ const outputFile = '../temp/fundayshop.address.csv';
         logger(`Ошибка: ${err}`);
     }
 })();
-async function init() {
-    const proxy = await getProxies();
-    logger('Proxy: ' + proxy)
-    return {
-        args: [
-            '--proxy-server=' + proxy,
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-blink-features=AutomationControlled',
-            // '--start-maximized'
-        ],
-        headless: false,
-        timeout: 60000,
-        executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        // defaultViewport: null,
-    };
-}
 
 const cookies = [
     { name: 'CITY_ID', value: '30640299', domain: 'fundayshop.com' },
@@ -76,17 +59,19 @@ async function extractShops(page, city) {
 
         for (const shopCard of shopCards) {
             const address = await page.evaluate(el => el.textContent.trim(), shopCard);
-            const mallMatch = address.match(/ТЦ\s*"(.*?)"/);
+            const mallMatch = address.match(/(ТЦ|ТРЦ\s*".*?)"/);
             const mall = mallMatch ? mallMatch[1] : '';
 
-            results.push({
+            const data ={
                 "Регион": city,
                 "Торговый центр": mall,
                 "Адрес": address,
                 "Дата сбора": moment().format('DD.MM.YYYY'),
-            });
+            }
 
-            logger(`Собран магазин: ${JSON.stringify(results[results.length - 1])}`);
+            results.push(data);
+
+            logger(`Собран магазин: ${JSON.stringify(data)}`);
         }
 
         return results;

@@ -1,27 +1,36 @@
 const puppeteer = require('puppeteer-extra');
 const logger = require("../logger");
-const { delay, readCSV, writeCSV, goto,getProxies } = require("../utils");
+const { delay, readCSV, writeCSV, goto,init } = require("../utils");
 const moment = require('moment');
 
 const inputFile = '../temp/city.csv';
 const outputFile = '../temp/zenden.address.csv';
 
-async function init() {
-    const proxy = await getProxies();
-    return {
-        args: [
-            '--proxy-server=' + proxy,
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-blink-features=AutomationControlled',
-            // '--start-maximized'
-        ],
-        headless: false,
-        timeout: 60000,
-        executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        defaultViewport: null,
-    };
-}
+(async () => {
+    try {
+        logger(`Запуск парсинга Zenden`);
+        const cities = await readCSV(inputFile);
+        const browser = await puppeteer.launch(await init());
+        const page = await browser.newPage();
+
+        if (!await goto(page, 'https://zenden.ru/shops', '.shops-standalone__group-item', 'domcontentloaded')) {
+            return;
+        }
+
+        let results = [];
+        for (const row of cities) {
+            logger(`Обрабатываем город: ${row.city}`);
+            const cityResults = await extractShops(page, row.city);
+            results.push(...cityResults);
+        }
+
+        writeCSV(outputFile, results);
+        await browser.close();
+        logger(`✅ Парсинг завершён. Данные сохранены в ${outputFile}`);
+    } catch (err) {
+        logger(`Критическая ошибка: ${err}`);
+    }
+})();
 
 async function extractShops(page, city) {
     try {
@@ -51,7 +60,7 @@ async function extractShops(page, city) {
         for (const shopCard of shopCards) {
             const addressLines = await shopCard.$$eval('.shop-card__address .shop-card__line', nodes => nodes.map(n => n.textContent.trim()));
             if (addressLines.length > 1) {
-                const mall = addressLines[0];
+                const mall = /ТЦ|ТРЦ|СТЦ/.test(addressLines[0]) ? /,/.test(addressLines[0]) ? addressLines[0].match(/^(.*),/)[1] : addressLines[0] : '';
                 const address = addressLines[1];
 
                 const data = {
@@ -72,29 +81,3 @@ async function extractShops(page, city) {
         return [];
     }
 }
-
-(async () => {
-    try {
-        logger(`Запуск парсинга Zenden`);
-        const cities = await readCSV(inputFile);
-        const browser = await puppeteer.launch(await init());
-        const page = await browser.newPage();
-
-        if (!await goto(page, 'https://zenden.ru/shops', '.shops-standalone__group-item', 'domcontentloaded')) {
-            return;
-        }
-
-        let results = [];
-        for (const row of cities) {
-            logger(`Обрабатываем город: ${row.city}`);
-            const cityResults = await extractShops(page, row.city);
-            results.push(...cityResults);
-        }
-
-        writeCSV(outputFile, results);
-        await browser.close();
-        logger(`✅ Парсинг завершён. Данные сохранены в ${outputFile}`);
-    } catch (err) {
-        logger(`Критическая ошибка: ${err}`);
-    }
-})();
