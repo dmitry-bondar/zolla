@@ -3,13 +3,13 @@ const { delay, readCSV, appendCSV, goto, init, setCookies, logger } = require(".
 const moment = require('moment');
 
 const inputFile = '../temp/city.csv';
-const outputFile = '../temp/acoolakids.address.csv';
+const outputFile = '../temp/conceptclub.address.csv';
 const blacklist = ['subscribe'];
-const domain = 'acoolakids.ru';
+const domain = 'conceptclub.ru';
 
 (async () => {
     try {
-        logger(domain, `Запуск парсинга acoolakids`);
+        logger(domain, `Запуск парсинга conceptclub`);
         const cities = await readCSV(inputFile, domain); // Передаем domain в readCSV
         const browser = await puppeteer.launch(await init());
         const page = await browser.newPage();
