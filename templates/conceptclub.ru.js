@@ -26,7 +26,7 @@ const domain = 'acoolakids.ru';
             }
         });
 
-        if (!await goto(page, 'https://acoolakids.ru/shops', '.city-choice-popup__confirm  .city-choice-popup__button_confirm', 'domcontentloaded', domain)) {
+        if (!await goto(page, 'https://conceptclub.ru/shops/', '.city-choice-popup__confirm  .city-choice-popup__button_confirm', 'domcontentloaded', domain)) {
             return;
         } else {
             await page.click('.city-choice-popup__confirm  .city-choice-popup__button_confirm');

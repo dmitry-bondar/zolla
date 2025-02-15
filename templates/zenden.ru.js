@@ -66,6 +66,7 @@ async function extractShops(page, city) {
                     "Регион": city,
                     "Торговый центр": mall,
                     "Адрес": address,
+                    "Формат":"",
                     "Дата сбора": moment().format('DD.MM.YYYY')
                 };
 

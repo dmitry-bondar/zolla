@@ -64,8 +64,8 @@ async function readCSV(filePath, domain = 'utils') {
 
 // Функция для записи CSV
 function appendCSV(filePath, data, domain = 'utils') {
-    const headers = 'Регион;Торговый центр;Адрес;Дата сбора\n';
-    const row = `${data["Регион"]};${data["Торговый центр"]};${data["Адрес"]};${data["Дата сбора"]}\n`;
+    const headers = 'Регион;Торговый центр;Адрес;Формат;Дата сбора\n';
+    const row = `${data["Регион"]};${data["Торговый центр"]};${data["Адрес"]};${data["Формат"]};${data["Дата сбора"]}\n`;
 
     // Если файл не существует, записываем заголовок
     if (!fs.existsSync(filePath)) {
