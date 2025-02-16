@@ -84,6 +84,10 @@ async function extractShops(page, city) {
         }
     } catch (err) {
         logger(domain, `Ошибка при парсинге города ${city}: ${err}`);
+
+        await page.reload()
+                await delay(10000)
+                await extractShops(page, city);
         return [];
     }
 }
