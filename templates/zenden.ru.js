@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer-extra');
-const { delay, readCSV, writeCSV, goto,init ,logger, appendCSV} = require("../utils");
+const {delay, readCSV, writeCSV, goto, init, logger, appendCSV} = require("../utils");
 const moment = require('moment');
 
 const inputFile = '../temp/city.csv';
@@ -17,13 +17,11 @@ const domain = 'zenden.ru';
             return;
         }
 
-        let results = [];
         for (const row of cities) {
             logger(domain, `Обрабатываем город: ${row.city}`);
             await extractShops(page, row.city);
         }
 
-        writeCSV(outputFile, results, domain);
         await browser.close();
         logger(domain, `✅ Парсинг завершён. Данные сохранены в ${outputFile}`);
     } catch (err) {
@@ -37,21 +35,23 @@ async function extractShops(page, city) {
 
         await page.click('.shops-standalone__group-item .js-cityModalOpenButton');
         await delay(5000);
-
-        await page.waitForSelector('.city-modal__search .js-cityModalInput');
-        await page.type('.city-modal__search .js-cityModalInput', city, { delay: 700 });
-        await delay(5000);
-
+        try {
+            await page.waitForSelector('.city-modal__search .js-cityModalInput');
+            await page.type('.city-modal__search .js-cityModalInput', city, {delay: 700});
+            await delay(5000);
+        } catch (e) {
+            logger(domain, e);
+            return
+        }
         await page.waitForSelector('.city-modal__list div[data-params]');
         await page.click('.city-modal__list div[data-params]');
         await delay(5000);
 
-        let results = [];
         const shopCards = await page.$$('#shops-map .shop-card');
 
         if (shopCards.length === 0) {
             logger(domain, `Магазины в городе ${city} не найдены.`);
-            return results;
+            return;
         }
 
         logger(domain, `Найдено ${shopCards.length} магазинов в городе ${city}.`);
@@ -66,7 +66,7 @@ async function extractShops(page, city) {
                     "Регион": city,
                     "Торговый центр": mall,
                     "Адрес": address,
-                    "Формат":"",
+                    "Формат": "",
                     "Дата сбора": moment().format('DD.MM.YYYY')
                 };
 
@@ -75,12 +75,11 @@ async function extractShops(page, city) {
             }
         }
 
-        return results;
     } catch (err) {
         logger(domain, `Ошибка при парсинге города ${city}: ${err}`);
         await page.reload()
-                await delay(10000)
-                await extractShops(page, city);
+        await delay(10000)
+        await extractShops(page, city);
         return [];
     }
 }

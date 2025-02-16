@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer-extra');
-const { delay, readCSV, appendCSV, goto, init, setCookies, logger } = require("../utils");
+const {delay, readCSV, appendCSV, goto, init, setCookies, logger} = require("../utils");
 const moment = require('moment');
 
 const inputFile = '../temp/city.csv';
@@ -45,8 +45,8 @@ const domain = 'acoolakids.ru';
 })();
 
 const cookies = [
-    { name: 'cookiesAccepted', value: 'true', domain: 'acoolakids.ru' },
-    { name: 'subscriptionCallPopupClosed', value: 'true', domain: 'acoolakids.ru' },
+    {name: 'cookiesAccepted', value: 'true', domain: 'acoolakids.ru'},
+    {name: 'subscriptionCallPopupClosed', value: 'true', domain: 'acoolakids.ru'},
     // { name: 'BITRIX_SM_CURRENT_LOCATION', value: '0000133095', domain: 'acoolakids.ru' }
 ];
 
@@ -58,19 +58,22 @@ async function extractShops(page, city) {
         await delay(5000);
 
         await page.waitForSelector('.search-input__field-wrapper #city-choice-search');
-        await page.type('.search-input__field-wrapper #city-choice-search', city, { delay: 500 });
+        await page.type('.search-input__field-wrapper #city-choice-search', city, {delay: 500});
         await delay(5000);
+        try {
+            await page.waitForSelector('.search-input__result-item');
+            await page.click('.search-input__result-item');
+            await delay(10000);
+        } catch (e) {
+            logger(domain, e);
+            return
+        }
 
-        await page.waitForSelector('.search-input__result-item');
-        await page.click('.search-input__result-item');
-        await delay(10000);
-
-        let results = [];
         const shopCards = await page.$$('.search-shop__wrapper .shop-address');
 
         if (shopCards.length === 0) {
             logger(domain, `Магазины в городе ${city} не найдены.`);
-            return results;
+            return ;
         }
 
         logger(domain, `Найдено ${shopCards.length} магазинов в городе ${city}.`);
@@ -88,7 +91,7 @@ async function extractShops(page, city) {
                     "Регион": city,
                     "Торговый центр": mall,
                     "Адрес": address,
-                    "Формат":"",
+                    "Формат": "",
                     "Дата сбора": moment().format('DD.MM.YYYY')
                 };
 
@@ -97,12 +100,10 @@ async function extractShops(page, city) {
             } catch (err) {
                 logger(domain, `Ошибка при обработке карточки: ${err}`);
                 await page.reload()
-                        await delay(10000)
-                        await extractShops(page, city);
+                await delay(10000)
+                await extractShops(page, city);
             }
         }
-
-        return results;
     } catch (err) {
         logger(domain, `Ошибка при парсинге города ${city}: ${err}`);
         await page.reload()

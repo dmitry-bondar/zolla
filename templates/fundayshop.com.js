@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
- const { delay, readCSV, writeCSV, goto, setCookies,init,logger, appendCSV} = require("../utils");
+const {delay, readCSV, writeCSV, goto, setCookies, init, logger, appendCSV} = require("../utils");
 const moment = require('moment');
 const domain = 'fundayshop.com';
 puppeteer.use(StealthPlugin());
@@ -33,8 +33,8 @@ const outputFile = '../temp/fundayshop.address.csv';
 })();
 
 const cookies = [
-    { name: 'CITY_ID', value: '30640299', domain: 'fundayshop.com' },
-    { name: 'isCookieUsageAgreed', value: '1', domain: 'fundayshop.com' }
+    {name: 'CITY_ID', value: '30640299', domain: 'fundayshop.com'},
+    {name: 'isCookieUsageAgreed', value: '1', domain: 'fundayshop.com'}
 ];
 
 async function extractShops(page, city) {
@@ -42,16 +42,18 @@ async function extractShops(page, city) {
         logger(domain, `Начинаем сбор данных для города: ${city}`);
         await page.click('.stores .container .title span');
         await delay(10000);
-
-        await page.waitForSelector('#ui-input-label-mask-query');
-        await page.type('#ui-input-label-mask-query', city, { delay: 700 });
-        await delay(10000);
-
+        try {
+            await page.waitForSelector('#ui-input-label-mask-query');
+            await page.type('#ui-input-label-mask-query', city, {delay: 700});
+            await delay(10000);
+        } catch (e) {
+            logger(domain, e);
+            return
+        }
         await page.waitForSelector('.suggests span');
         await page.click('.suggests span');
         await delay(10000);
 
-        let results = [];
         const shopCards = await page.$$('.address');
 
         for (const shopCard of shopCards) {
@@ -59,11 +61,11 @@ async function extractShops(page, city) {
             const mallMatch = address.match(/(ТЦ|ТРЦ\s*".*?)"/);
             const mall = mallMatch ? mallMatch[1] : '';
 
-            const data ={
+            const data = {
                 "Регион": city,
                 "Торговый центр": mall,
                 "Адрес": address,
-                "Формат":"",
+                "Формат": "",
                 "Дата сбора": moment().format('DD.MM.YYYY')
             }
 
@@ -72,12 +74,11 @@ async function extractShops(page, city) {
             logger(domain, `Собран магазин: ${JSON.stringify(data)}`);
         }
 
-        return results;
     } catch (err) {
         logger(domain, `Ошибка при парсинге города ${city}: ${err}`);
         await page.reload()
-                await delay(10000)
-                await extractShops(page, city);
+        await delay(10000)
+        await extractShops(page, city);
         return [];
     }
 }

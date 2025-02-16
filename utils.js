@@ -35,7 +35,8 @@ async function init() {
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-blink-features=AutomationControlled',
-            '--window-size=1800,700'
+            '--start-maximized'
+            // '--window-size=1800,700'
         ],
         headless: false,
         timeout: 60000,
