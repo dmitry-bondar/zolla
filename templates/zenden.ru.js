@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer-extra');
 const {delay, readCSV, writeCSV, goto, init, logger, appendCSV} = require("../utils");
 const moment = require('moment');
 
-const inputFile = '../temp/city.csv';
+const inputFile = '../temp/city_zenden.csv';
 const outputFile = '../temp/zenden.address.csv';
 const domain = 'zenden.ru';
 
@@ -57,14 +57,14 @@ async function extractShops(page, city) {
         logger(domain, `Найдено ${shopCards.length} магазинов в городе ${city}.`);
 
         for (const shopCard of shopCards) {
-            const addressLines = await shopCard.$$eval('.shop-card__address .shop-card__line', nodes => nodes.map(n => n.textContent.trim()));
+            const addressLines = await shopCard.$$eval('.shop-card__address .shop-card__line', nodes => nodes.map(n => n.textContent.replace(/\n/g,'').trim()));
             if (addressLines.length > 1) {
-                const mall = /ТЦ|ТРЦ|СТЦ/.test(addressLines[0]) ? /,/.test(addressLines[0]) ? addressLines[0].match(/^(.*),/)[1] : addressLines[0] : '';
-                const address = addressLines[1];
+                const mall = /ТЦ|ТРЦ|СТЦ/.test(addressLines[0]) ? /,/.test(addressLines[0]) ? addressLines[0].match(/^(.*),/)?.[1] : addressLines[0] : '';
+                const address = addressLines?.[1];
 
                 const data = {
                     "Регион": city,
-                    "Торговый центр": mall,
+                    "Торговый центр": mall || "",
                     "Адрес": address,
                     "Формат": "",
                     "Дата сбора": moment().format('DD.MM.YYYY')

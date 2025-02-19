@@ -10,11 +10,11 @@
   },
   "scripts": {
     "start:all": "npm-run-all --parallel start:acoolakids start:fundayshop start:zenden start:conceptclub start:shop.mango",
-    "start:acoolakids": "cd templates & node acoolakids.ru.js",
-    "start:fundayshop": "cd templates & node fundayshop.com.js",
-    "start:zenden": "cd templates & node zenden.ru.js",
-    "start:conceptclub": "cd templates & node conceptclub.ru.js",
-    "start:shop.mango": "cd templates & node shop.mango.com.js"
+    "start:acoolakids": "cd c:\/zolla\/templates & node acoolakids.ru.js",
+    "start:fundayshop": "cd c:\/zolla\/templates & node fundayshop.com.js",
+    "start:zenden": "cd c:\/zolla\/templates & node zenden.ru.js",
+    "start:conceptclub": "cd c:\/zolla\/templates & node conceptclub.ru.js",
+    "start:shop.mango": "cd c:/zolla/templates & node shop.mango.com.js"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5"
